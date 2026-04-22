@@ -38,7 +38,6 @@ const createApp = () => {
   app.use(globalLimiter);
   app.use(mongoSanitize());
   app.use(express.json({ limit: '10kb' }));
-  app.locals.devFallback = process.env.DEV_FALLBACK !== 'false' && process.env.NODE_ENV !== 'production';
 
   app.get('/', (req, res) => {
     res.json({ message: 'Ayanfe Clothings API is running' });

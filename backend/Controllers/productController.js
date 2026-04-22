@@ -3,14 +3,6 @@ const Product = require('../models/Product');
 const asyncHandler = require('../utills/asyncHandler');
 
 const listProducts = asyncHandler(async (req, res) => {
-  const fallbackStore = req.app.locals.devFallbackStore;
-
-  if (fallbackStore) {
-    const result = fallbackStore.listProducts(req.query);
-    res.status(200).json(result);
-    return;
-  }
-
   const {
     q,
     category,
@@ -69,18 +61,6 @@ const listProducts = asyncHandler(async (req, res) => {
 
 const getProductById = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const fallbackStore = req.app.locals.devFallbackStore;
-
-  if (fallbackStore) {
-    const product = fallbackStore.getProductById(id);
-    if (!product) {
-      res.status(404);
-      throw new Error('Product not found.');
-    }
-
-    res.status(200).json({ product });
-    return;
-  }
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     res.status(400);
@@ -98,13 +78,6 @@ const getProductById = asyncHandler(async (req, res) => {
 
 const createProduct = asyncHandler(async (req, res) => {
   const { name, slug, description, category, price, stock, image, rating, featured } = req.body;
-  const fallbackStore = req.app.locals.devFallbackStore;
-
-  if (fallbackStore) {
-    const product = fallbackStore.createProduct({ name, slug, description, category, price, stock, image, rating, featured });
-    res.status(201).json({ product });
-    return;
-  }
 
   if (!name || !slug || !description || !category || price === undefined || stock === undefined) {
     res.status(400);
@@ -134,18 +107,6 @@ const createProduct = asyncHandler(async (req, res) => {
 
 const updateProduct = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const fallbackStore = req.app.locals.devFallbackStore;
-
-  if (fallbackStore) {
-    const product = fallbackStore.updateProduct(id, req.body);
-    if (!product) {
-      res.status(404);
-      throw new Error('Product not found.');
-    }
-
-    res.status(200).json({ product });
-    return;
-  }
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     res.status(400);
@@ -167,18 +128,6 @@ const updateProduct = asyncHandler(async (req, res) => {
 
 const deleteProduct = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const fallbackStore = req.app.locals.devFallbackStore;
-
-  if (fallbackStore) {
-    const product = fallbackStore.deleteProduct(id);
-    if (!product) {
-      res.status(404);
-      throw new Error('Product not found.');
-    }
-
-    res.status(200).json({ message: 'Product deleted.' });
-    return;
-  }
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     res.status(400);

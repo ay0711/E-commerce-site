@@ -15,37 +15,12 @@ const getOrCreateCart = async (userId) => {
 };
 
 const getCart = asyncHandler(async (req, res) => {
-  const fallbackStore = req.app.locals.devFallbackStore;
-
-  if (fallbackStore) {
-    res.status(200).json({ cart: fallbackStore.getCart(req.user._id) });
-    return;
-  }
-
   const cart = await getOrCreateCart(req.user._id);
   res.status(200).json({ cart });
 });
 
 const addToCart = asyncHandler(async (req, res) => {
   const { productId, quantity = 1 } = req.body;
-  const fallbackStore = req.app.locals.devFallbackStore;
-
-  if (fallbackStore) {
-    const quantityNumber = Number(quantity);
-    if (!Number.isFinite(quantityNumber) || quantityNumber < 1) {
-      res.status(400);
-      throw new Error('Quantity must be at least 1.');
-    }
-
-    const result = fallbackStore.addToCart(req.user._id, productId, quantityNumber);
-    if (result.error) {
-      res.status(result.statusCode || 400);
-      throw new Error(result.error);
-    }
-
-    res.status(200).json({ message: 'Item added to cart.', cart: result });
-    return;
-  }
 
   if (!mongoose.Types.ObjectId.isValid(productId)) {
     res.status(400);
@@ -98,24 +73,6 @@ const addToCart = asyncHandler(async (req, res) => {
 const updateCartItem = asyncHandler(async (req, res) => {
   const { productId } = req.params;
   const { quantity } = req.body;
-  const fallbackStore = req.app.locals.devFallbackStore;
-
-  if (fallbackStore) {
-    const quantityNumber = Number(quantity);
-    if (!Number.isFinite(quantityNumber) || quantityNumber < 1) {
-      res.status(400);
-      throw new Error('Quantity must be at least 1.');
-    }
-
-    const result = fallbackStore.updateCartItem(req.user._id, productId, quantityNumber);
-    if (result.error) {
-      res.status(result.statusCode || 400);
-      throw new Error(result.error);
-    }
-
-    res.status(200).json({ message: 'Cart item updated.', cart: result });
-    return;
-  }
 
   if (!mongoose.Types.ObjectId.isValid(productId)) {
     res.status(400);
@@ -156,13 +113,6 @@ const updateCartItem = asyncHandler(async (req, res) => {
 
 const removeCartItem = asyncHandler(async (req, res) => {
   const { productId } = req.params;
-  const fallbackStore = req.app.locals.devFallbackStore;
-
-  if (fallbackStore) {
-    const cart = fallbackStore.removeCartItem(req.user._id, productId);
-    res.status(200).json({ message: 'Item removed from cart.', cart });
-    return;
-  }
 
   if (!mongoose.Types.ObjectId.isValid(productId)) {
     res.status(400);
@@ -178,13 +128,6 @@ const removeCartItem = asyncHandler(async (req, res) => {
 });
 
 const clearCart = asyncHandler(async (req, res) => {
-  const fallbackStore = req.app.locals.devFallbackStore;
-
-  if (fallbackStore) {
-    res.status(200).json({ message: 'Cart cleared.', cart: fallbackStore.clearCart(req.user._id) });
-    return;
-  }
-
   const cart = await getOrCreateCart(req.user._id);
   cart.items = [];
   cart.subtotal = 0;
