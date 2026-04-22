@@ -1,4 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const rawBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = String(rawBaseUrl).replace(/\/+$/, '');
 
 const buildHeaders = (token, hasBody = true) => {
   const headers = {};
@@ -62,6 +63,7 @@ export const productApi = {
     return request(`/products${queryText ? `?${queryText}` : ''}`);
   },
   getById: (productId) => request(`/products/${productId}`),
+  categoryMeta: () => request('/products/categories/meta'),
   create: (token, body) => request('/products', { method: 'POST', body: JSON.stringify(body) }, token),
   update: (token, productId, body) =>
     request(`/products/${productId}`, { method: 'PATCH', body: JSON.stringify(body) }, token),

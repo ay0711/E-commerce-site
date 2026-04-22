@@ -59,6 +59,42 @@ const listProducts = asyncHandler(async (req, res) => {
   });
 });
 
+const getCategoryMetadata = asyncHandler(async (req, res) => {
+  const categories = await Product.aggregate([
+    { $sort: { featured: -1, rating: -1, createdAt: -1 } },
+    {
+      $group: {
+        _id: '$category',
+        totalProducts: { $sum: 1 },
+        featuredProducts: {
+          $sum: {
+            $cond: [{ $eq: ['$featured', true] }, 1, 0],
+          },
+        },
+        averagePrice: { $avg: '$price' },
+        minPrice: { $min: '$price' },
+        maxPrice: { $max: '$price' },
+        heroImage: { $first: '$image' },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        category: '$_id',
+        totalProducts: 1,
+        featuredProducts: 1,
+        averagePrice: { $round: ['$averagePrice', 2] },
+        minPrice: 1,
+        maxPrice: 1,
+        heroImage: 1,
+      },
+    },
+    { $sort: { category: 1 } },
+  ]);
+
+  res.status(200).json({ categories });
+});
+
 const getProductById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -145,6 +181,7 @@ const deleteProduct = asyncHandler(async (req, res) => {
 
 module.exports = {
   listProducts,
+  getCategoryMetadata,
   getProductById,
   createProduct,
   updateProduct,
