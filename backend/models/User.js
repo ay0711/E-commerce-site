@@ -26,6 +26,21 @@ const userSchema = new mongoose.Schema(
       enum: ['user', 'admin'],
       default: 'user',
     },
+    socialProvider: {
+      type: String,
+      enum: ['google', 'github', null],
+      default: null,
+    },
+    socialId: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    avatar: {
+      type: String,
+      trim: true,
+      default: '',
+    },
   },
   { timestamps: true }
 );

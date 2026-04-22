@@ -124,7 +124,7 @@ const buildCategoryProducts = (blueprint, perCategoryTarget) => {
 };
 
 const buildCatalogProducts = () => {
-  const perCategoryTarget = 140;
+  const perCategoryTarget = 500;
   const allProducts = [];
 
   categoryBlueprints.forEach((blueprint) => {

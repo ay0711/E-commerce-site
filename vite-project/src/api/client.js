@@ -47,6 +47,7 @@ const request = async (path, options = {}, token) => {
 export const authApi = {
   register: (body) => request('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
   login: (body) => request('/auth/login', { method: 'POST', body: JSON.stringify(body) }),
+  social: (body) => request('/auth/social', { method: 'POST', body: JSON.stringify(body) }),
   me: (token) => request('/auth/me', {}, token),
 };
 

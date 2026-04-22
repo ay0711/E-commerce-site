@@ -59,6 +59,24 @@ const getItemProductId = (item) => (typeof item.product === 'string' ? item.prod
 
 function SiteLayout({ children, user, onLogout, cartCount, statusMessage, clearStatus, searchValue, onSearchChange }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [navOpen, setNavOpen] = useState(false);
+
+  useEffect(() => {
+    setNavOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!navOpen) {
+      document.body.style.overflow = '';
+      return;
+    }
+
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [navOpen]);
 
   return (
     <div className="app-shell">
@@ -74,13 +92,19 @@ function SiteLayout({ children, user, onLogout, cartCount, statusMessage, clearS
           </span>
         </button>
 
+        <button type="button" className="nav-toggle" onClick={() => setNavOpen(true)} aria-label="Open navigation menu">
+          Menu
+        </button>
+
         <nav className="nav-links" aria-label="Main navigation">
           <NavLink to="/" end>
             Home
           </NavLink>
           <NavLink to="/shop">Shop</NavLink>
           <NavLink to="/cart">Cart</NavLink>
-          <NavLink to="/account">Account</NavLink>
+          {user ? <NavLink to="/account">Account</NavLink> : null}
+          {!user ? <NavLink to="/signin">Sign in</NavLink> : null}
+          {!user ? <NavLink to="/signup">Sign up</NavLink> : null}
           {user?.role === 'admin' ? <NavLink to="/admin">Admin</NavLink> : null}
         </nav>
 
@@ -102,12 +126,33 @@ function SiteLayout({ children, user, onLogout, cartCount, statusMessage, clearS
               Logout
             </button>
           ) : (
-            <Link className="pill-button ghost" to="/account">
+            <Link className="pill-button ghost" to="/signin">
               Sign in
             </Link>
           )}
         </div>
       </header>
+
+      <div className={navOpen ? 'nav-drawer open' : 'nav-drawer'} aria-hidden={!navOpen}>
+        <button type="button" className="nav-drawer-overlay" onClick={() => setNavOpen(false)} aria-label="Close navigation" />
+        <div className="nav-drawer-panel">
+          <div className="nav-drawer-head">
+            <strong>Menu</strong>
+            <button type="button" onClick={() => setNavOpen(false)}>
+              Close
+            </button>
+          </div>
+          <NavLink to="/" end>
+            Home
+          </NavLink>
+          <NavLink to="/shop">Shop</NavLink>
+          <NavLink to="/cart">Cart</NavLink>
+          {user ? <NavLink to="/account">Account</NavLink> : null}
+          {!user ? <NavLink to="/signin">Sign in</NavLink> : null}
+          {!user ? <NavLink to="/signup">Sign up</NavLink> : null}
+          {user?.role === 'admin' ? <NavLink to="/admin">Admin</NavLink> : null}
+        </div>
+      </div>
 
       {statusMessage ? (
         <div className="status-banner" role="status">
@@ -682,56 +727,116 @@ function CartPage({ cart, onUpdateItem, onRemoveItem, onClearCart, shippingAddre
   );
 }
 
-function AccountPage({ user, authMode, setAuthMode, authForm, setAuthForm, onSubmitAuth, authLoading, orders, loadingOrders }) {
+function SignInPage({ user, authForm, setAuthForm, onSubmitAuth, authLoading, onSocialAuth }) {
+  if (user) return <Navigate to="/account" replace />;
+
+  return (
+    <section className="page-wrap account-card card-surface auth-page">
+      <div className="section-head">
+        <h2>Sign in</h2>
+        <Link to="/signup">Need an account?</Link>
+      </div>
+
+      <form className="account-form" onSubmit={(event) => onSubmitAuth(event, 'login')}>
+        <label>
+          Email
+          <input
+            type="email"
+            value={authForm.email}
+            onChange={(event) => setAuthForm((state) => ({ ...state, email: event.target.value }))}
+            required
+          />
+        </label>
+
+        <label>
+          Password
+          <input
+            type="password"
+            minLength={8}
+            value={authForm.password}
+            onChange={(event) => setAuthForm((state) => ({ ...state, password: event.target.value }))}
+            required
+          />
+        </label>
+
+        <button className="pill-button" type="submit" disabled={authLoading}>
+          {authLoading ? 'Please wait...' : 'Sign in'}
+        </button>
+      </form>
+
+      <div className="social-auth-grid">
+        <button type="button" className="pill-button ghost" onClick={() => onSocialAuth('google', 'login')}>
+          Continue with Google
+        </button>
+        <button type="button" className="pill-button ghost" onClick={() => onSocialAuth('github', 'login')}>
+          Continue with GitHub
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function SignUpPage({ user, authForm, setAuthForm, onSubmitAuth, authLoading, onSocialAuth }) {
+  if (user) return <Navigate to="/account" replace />;
+
+  return (
+    <section className="page-wrap account-card card-surface auth-page">
+      <div className="section-head">
+        <h2>Create account</h2>
+        <Link to="/signin">Already have an account?</Link>
+      </div>
+
+      <form className="account-form" onSubmit={(event) => onSubmitAuth(event, 'register')}>
+        <label>
+          Name
+          <input
+            value={authForm.name}
+            onChange={(event) => setAuthForm((state) => ({ ...state, name: event.target.value }))}
+            required
+          />
+        </label>
+
+        <label>
+          Email
+          <input
+            type="email"
+            value={authForm.email}
+            onChange={(event) => setAuthForm((state) => ({ ...state, email: event.target.value }))}
+            required
+          />
+        </label>
+
+        <label>
+          Password
+          <input
+            type="password"
+            minLength={8}
+            value={authForm.password}
+            onChange={(event) => setAuthForm((state) => ({ ...state, password: event.target.value }))}
+            required
+          />
+        </label>
+
+        <button className="pill-button" type="submit" disabled={authLoading}>
+          {authLoading ? 'Please wait...' : 'Create account'}
+        </button>
+      </form>
+
+      <div className="social-auth-grid">
+        <button type="button" className="pill-button ghost" onClick={() => onSocialAuth('google', 'register')}>
+          Sign up with Google
+        </button>
+        <button type="button" className="pill-button ghost" onClick={() => onSocialAuth('github', 'register')}>
+          Sign up with GitHub
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function AccountPage({ user, orders, loadingOrders }) {
   if (!user) {
-    return (
-      <section className="page-wrap account-card card-surface">
-        <div className="section-head">
-          <h2>{authMode === 'login' ? 'Sign in' : 'Create account'}</h2>
-          <button type="button" onClick={() => setAuthMode((state) => (state === 'login' ? 'register' : 'login'))}>
-            {authMode === 'login' ? 'Need an account?' : 'Have an account?'}
-          </button>
-        </div>
-
-        <form className="account-form" onSubmit={onSubmitAuth}>
-          {authMode === 'register' ? (
-            <label>
-              Name
-              <input
-                value={authForm.name}
-                onChange={(event) => setAuthForm((state) => ({ ...state, name: event.target.value }))}
-                required
-              />
-            </label>
-          ) : null}
-
-          <label>
-            Email
-            <input
-              type="email"
-              value={authForm.email}
-              onChange={(event) => setAuthForm((state) => ({ ...state, email: event.target.value }))}
-              required
-            />
-          </label>
-
-          <label>
-            Password
-            <input
-              type="password"
-              minLength={8}
-              value={authForm.password}
-              onChange={(event) => setAuthForm((state) => ({ ...state, password: event.target.value }))}
-              required
-            />
-          </label>
-
-          <button className="pill-button" type="submit" disabled={authLoading}>
-            {authLoading ? 'Please wait...' : authMode === 'login' ? 'Sign in' : 'Create account'}
-          </button>
-        </form>
-      </section>
-    );
+    return <Navigate to="/signin" replace />;
   }
 
   return (
@@ -1129,7 +1234,6 @@ function App() {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   const [authForm, setAuthForm] = useState(initialAuth);
-  const [authMode, setAuthMode] = useState('login');
   const [authLoading, setAuthLoading] = useState(false);
 
   const [orders, setOrders] = useState([]);
@@ -1323,7 +1427,7 @@ function App() {
 
   const requireAuth = () => {
     setStatusMessage('Sign in to continue.');
-    navigate('/account');
+    navigate('/signin');
   };
 
   const addToCart = async (product) => {
@@ -1397,13 +1501,13 @@ function App() {
     }
   };
 
-  const submitAuth = async (event) => {
+  const submitAuth = async (event, mode) => {
     event.preventDefault();
     setAuthLoading(true);
 
     try {
       const response =
-        authMode === 'login'
+        mode === 'login'
           ? await authApi.login({ email: authForm.email, password: authForm.password })
           : await authApi.register(authForm);
 
@@ -1411,6 +1515,38 @@ function App() {
       setToken(response.token);
       setAuthForm(initialAuth);
       setStatusMessage(response.message || 'Authentication successful.');
+      navigate('/account');
+    } catch (error) {
+      setStatusMessage(error.message);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const socialAuth = async (provider, mode) => {
+    const currentEmail = authForm.email?.trim() || '';
+    const currentName = authForm.name?.trim() || '';
+
+    const email = currentEmail || window.prompt(`Enter your ${provider} email:`) || '';
+    if (!email.trim()) {
+      setStatusMessage('Email is required for social auth.');
+      return;
+    }
+
+    const name = currentName || (mode === 'register' ? window.prompt('Enter your full name:') || '' : 'Ayanfe Customer');
+
+    setAuthLoading(true);
+    try {
+      const response = await authApi.social({
+        provider,
+        email: email.trim(),
+        name: name.trim() || 'Ayanfe Customer',
+      });
+
+      localStorage.setItem('ayanfe_token', response.token);
+      setToken(response.token);
+      setAuthForm(initialAuth);
+      setStatusMessage(response.message || 'Social sign-in successful.');
       navigate('/account');
     } catch (error) {
       setStatusMessage(error.message);
@@ -1493,21 +1629,32 @@ function App() {
           }
         />
         <Route
-          path="/account"
+          path="/signin"
           element={
-            <AccountPage
+            <SignInPage
               user={user}
-              authMode={authMode}
-              setAuthMode={setAuthMode}
               authForm={authForm}
               setAuthForm={setAuthForm}
               onSubmitAuth={submitAuth}
               authLoading={authLoading}
-              orders={orders}
-              loadingOrders={loadingOrders}
+              onSocialAuth={socialAuth}
             />
           }
         />
+        <Route
+          path="/signup"
+          element={
+            <SignUpPage
+              user={user}
+              authForm={authForm}
+              setAuthForm={setAuthForm}
+              onSubmitAuth={submitAuth}
+              authLoading={authLoading}
+              onSocialAuth={socialAuth}
+            />
+          }
+        />
+        <Route path="/account" element={<AccountPage user={user} orders={orders} loadingOrders={loadingOrders} />} />
         <Route
           path="/admin"
           element={
