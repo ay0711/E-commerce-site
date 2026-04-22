@@ -1,9 +1,7 @@
 :root {
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: #1f1a17;
-  background:
-    radial-gradient(circle at top, rgba(246, 215, 159, 0.35), transparent 38%),
-    linear-gradient(180deg, #f8f2ea 0%, #ede6dc 100%);
+  font-family: 'Space Grotesk', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #0f2430;
+  background: linear-gradient(180deg, #eef6fb 0%, #f7efe2 100%);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -18,60 +16,34 @@ html {
   scroll-behavior: smooth;
 }
 
-body {
+body,
+#root {
   margin: 0;
-  min-width: 320px;
   min-height: 100vh;
+}
+
+body {
   background: transparent;
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
 button:focus-visible,
-input:focus-visible {
-  outline: 2px solid #8a5a2b;
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #023047;
   outline-offset: 3px;
 }
 
 img,
 svg {
   display: block;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-#root {
-  min-height: 100vh;
-}
-:root {
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: #1f1a17;
-  background: #ece7df;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html,
-body,
-#root {
-  margin: 0;
-  min-height: 100%;
-}
-
-body {
-  min-height: 100vh;
 }
 
 a {

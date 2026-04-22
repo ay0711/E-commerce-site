@@ -5,6 +5,12 @@ const imagePool = [
   'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=80',
   'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=900&q=80',
   'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1464863979621-258859e62245?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1495385794356-15371f348c31?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=900&q=80',
 ];
 
 const capsuleNames = ['Noir', 'Sahara', 'Pearl', 'Velvet', 'Aura', 'Luna', 'Sienna', 'Gold'];
@@ -41,6 +47,38 @@ const categoryBlueprints = [
     basePrice: 38,
     priceStep: 3,
     stockBase: 34,
+  },
+  {
+    category: 'Resort Edit',
+    descriptors: ['Breeze', 'Coastal', 'Palm', 'Sunset', 'Riviera'],
+    itemNouns: ['Resort Set', 'Flow Dress', 'Beach Kaftan'],
+    basePrice: 88,
+    priceStep: 4,
+    stockBase: 20,
+  },
+  {
+    category: 'Contemporary',
+    descriptors: ['Modern', 'Edge', 'Studio', 'Metro', 'Grid'],
+    itemNouns: ['Blazer Set', 'Utility Dress', 'Tailored Co-ord'],
+    basePrice: 106,
+    priceStep: 5,
+    stockBase: 22,
+  },
+  {
+    category: 'Outerwear',
+    descriptors: ['Cloud', 'Aero', 'Shield', 'Prime', 'Urban'],
+    itemNouns: ['Trench', 'Coat', 'Jacket'],
+    basePrice: 128,
+    priceStep: 6,
+    stockBase: 16,
+  },
+  {
+    category: 'Footwear',
+    descriptors: ['Stride', 'Gloss', 'Elevate', 'Luxe', 'Polish'],
+    itemNouns: ['Heel', 'Sandal', 'Loafer'],
+    basePrice: 72,
+    priceStep: 4,
+    stockBase: 24,
   },
 ];
 
@@ -86,7 +124,7 @@ const buildCategoryProducts = (blueprint, perCategoryTarget) => {
 };
 
 const buildCatalogProducts = () => {
-  const perCategoryTarget = 30;
+  const perCategoryTarget = 140;
   const allProducts = [];
 
   categoryBlueprints.forEach((blueprint) => {

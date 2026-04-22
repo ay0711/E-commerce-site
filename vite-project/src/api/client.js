@@ -61,6 +61,7 @@ export const productApi = {
     const queryText = query.toString();
     return request(`/products${queryText ? `?${queryText}` : ''}`);
   },
+  getById: (productId) => request(`/products/${productId}`),
   create: (token, body) => request('/products', { method: 'POST', body: JSON.stringify(body) }, token),
   update: (token, productId, body) =>
     request(`/products/${productId}`, { method: 'PATCH', body: JSON.stringify(body) }, token),

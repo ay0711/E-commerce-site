@@ -1,34 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { authApi, cartApi, orderApi, productApi } from './api/client';
-import { fallbackProducts } from './api/mockProducts';
 import './App.css';
 
-const assurances = [
-  'Encrypted checkout',
-  'Fast nationwide shipping',
-  'Easy size exchanges',
-  'Premium packaging',
-];
-
-const servicePoints = [
-  '24-hour order processing',
-  'Tracked deliveries',
-  'Fraud-aware checkout flow',
-];
-
-const testimonials = [
-  {
-    quote:
-      'The fit, finishing, and packaging feel premium. It looks like a brand that already knows where it is going.',
-    author: 'Customer review',
-  },
-  {
-    quote:
-      'The storefront is calm, sharp, and easy to shop. The luxury feel is there without being crowded.',
-    author: 'Style buyer',
-  },
-];
-
+const initialAuth = { name: '', email: '', password: '' };
 const initialShipping = {
   fullName: '',
   line1: '',
@@ -39,7 +14,7 @@ const initialShipping = {
   phone: '',
 };
 
-const initialAdminProductForm = {
+const adminFormDefaults = {
   name: '',
   slug: '',
   category: 'Essentials',
@@ -50,169 +25,753 @@ const initialAdminProductForm = {
   featured: false,
 };
 
-const categoryAccentMap = {
-  'Luxury Sets': 'from-gold',
-  Essentials: 'from-rose',
-  'Occasion Wear': 'from-plum',
-  Accessories: 'from-copper',
-};
+const defaultCategories = [
+  'All',
+  'Luxury Sets',
+  'Essentials',
+  'Occasion Wear',
+  'Accessories',
+  'Resort Edit',
+  'Contemporary',
+  'Outerwear',
+  'Footwear',
+];
 
-const getCardAccent = (category) => categoryAccentMap[category] || 'from-slate';
+const formatCurrency = (value) => `$${Number(value || 0).toFixed(2)}`;
+const getItemProductId = (item) => (typeof item.product === 'string' ? item.product : item.product?._id);
 
-function SearchIcon() {
+function SiteLayout({ children, user, onLogout, cartCount, statusMessage, clearStatus, searchValue, onSearchChange }) {
+  const navigate = useNavigate();
+
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M10.5 4a6.5 6.5 0 1 0 4.17 11.49l4.92 4.92 1.41-1.41-4.92-4.92A6.5 6.5 0 0 0 10.5 4Zm0 2a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z" />
-    </svg>
+    <div className="app-shell">
+      <div className="atmosphere atmosphere-a" />
+      <div className="atmosphere atmosphere-b" />
+
+      <header className="top-nav">
+        <button className="brand" type="button" onClick={() => navigate('/')}>
+          <span className="brand-dot" />
+          <span>
+            <strong>Ayanfe Clothings</strong>
+            <small>Editorial Commerce</small>
+          </span>
+        </button>
+
+        <nav className="nav-links" aria-label="Main navigation">
+          <NavLink to="/" end>
+            Home
+          </NavLink>
+          <NavLink to="/shop">Shop</NavLink>
+          <NavLink to="/cart">Cart</NavLink>
+          <NavLink to="/account">Account</NavLink>
+          {user?.role === 'admin' ? <NavLink to="/admin">Admin</NavLink> : null}
+        </nav>
+
+        <label className="search-input" aria-label="Search catalog">
+          <input
+            type="search"
+            value={searchValue}
+            placeholder="Search collections"
+            onChange={(event) => onSearchChange(event.target.value)}
+          />
+        </label>
+
+        <div className="account-actions">
+          <Link className="pill-button" to="/cart">
+            Bag ({cartCount})
+          </Link>
+          {user ? (
+            <button className="pill-button ghost" type="button" onClick={onLogout}>
+              Logout
+            </button>
+          ) : (
+            <Link className="pill-button ghost" to="/account">
+              Sign in
+            </Link>
+          )}
+        </div>
+      </header>
+
+      {statusMessage ? (
+        <div className="status-banner" role="status">
+          <span>{statusMessage}</span>
+          <button type="button" onClick={clearStatus} aria-label="Dismiss message">
+            x
+          </button>
+        </div>
+      ) : null}
+
+      {children}
+    </div>
   );
 }
 
-function CartIcon() {
+function HomePage({ featuredProducts, loading, onAddToCart, onRequireAuth }) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M7 4h-2l-1 2H1v2h2l3.6 7.59-1.35 2.45A2 2 0 0 0 7 21h11v-2H7l1.1-2h7.45a2 2 0 0 0 1.8-1.12L22 7H6.42L5.73 5.6H7V4Zm2.16 7-1-2h11.2l-1.33 3.2a.5.5 0 0 1-.46.3H9.16Zm-.66 8a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z" />
-    </svg>
+    <>
+      <section className="hero-section page-wrap">
+        <div className="hero-copy">
+          <p className="eyebrow">New season / 2026</p>
+          <h1>Modern silhouettes for power, softness, and presence.</h1>
+          <p>
+            Elevated fabrics, bold tailoring, and checkout that feels as premium as the wardrobe. This is a flagship storefront,
+            not a template.
+          </p>
+          <div className="hero-actions">
+            <Link className="pill-button" to="/shop">
+              Explore catalog
+            </Link>
+            <button className="pill-button ghost" type="button" onClick={onRequireAuth}>
+              Join members
+            </button>
+          </div>
+        </div>
+
+        <div className="hero-panel">
+          <p>Featured pieces</p>
+          <strong>{featuredProducts.length > 0 ? `${featuredProducts.length} handpicked styles` : 'Curating now'}</strong>
+          <span>Free style-exchange in 7 days</span>
+        </div>
+      </section>
+
+      <section className="featured-grid page-wrap">
+        <div className="section-head">
+          <h2>Top picks</h2>
+          <Link to="/shop">View all products</Link>
+        </div>
+
+        <div className="product-grid">
+          {loading ? <p className="empty-state">Loading featured products...</p> : null}
+          {!loading && featuredProducts.length === 0 ? <p className="empty-state">No featured products yet.</p> : null}
+
+          {featuredProducts.map((product) => (
+            <article className="product-card" key={product._id || product.slug}>
+              <Link to={`/shop/${product._id}`} className="card-image" style={{ backgroundImage: `url(${product.image})` }}>
+                <span>{product.category}</span>
+              </Link>
+              <div className="card-content">
+                <h3>{product.name}</h3>
+                <p>{product.description}</p>
+                <div className="card-row">
+                  <strong>{formatCurrency(product.price)}</strong>
+                  <button type="button" onClick={() => onAddToCart(product)}>
+                    Add
+                  </button>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </>
   );
 }
 
-function ShieldIcon() {
+function ShopPage({ filters, setFilters, products, pagination, loading, categories, onAddToCart }) {
+  const totalPages = pagination?.pages || 1;
+  const page = pagination?.page || 1;
+
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 2 4 5v6c0 5.25 3.44 9.87 8 11 4.56-1.13 8-5.75 8-11V5l-8-3Zm0 18c-3.28-.96-6-4.63-6-9V6.3l6-2.25 6 2.25V11c0 4.37-2.72 8.04-6 9Zm-1-4.5 6-6-1.41-1.41L11 13.17l-2.59-2.58L7 12l4 3.5Z" />
-    </svg>
+    <section className="page-wrap shop-page">
+      <div className="section-head stack-mobile">
+        <div>
+          <h2>Shop all products</h2>
+          <p>{pagination.total || 0} items available</p>
+        </div>
+        <div className="shop-controls">
+          <select
+            value={filters.category}
+            onChange={(event) => setFilters((state) => ({ ...state, category: event.target.value, page: 1 }))}
+          >
+            {categories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+          <select
+            value={filters.sort}
+            onChange={(event) => setFilters((state) => ({ ...state, sort: event.target.value, page: 1 }))}
+          >
+            <option value="newest">Newest</option>
+            <option value="price-asc">Price low-high</option>
+            <option value="price-desc">Price high-low</option>
+            <option value="rating">Top rated</option>
+          </select>
+        </div>
+      </div>
+
+      {loading ? <p className="empty-state">Loading products...</p> : null}
+      {!loading && products.length === 0 ? <p className="empty-state">No products found for this filter.</p> : null}
+
+      <div className="product-grid">
+        {products.map((product) => (
+          <article className="product-card" key={product._id || product.slug}>
+            <Link to={`/shop/${product._id}`} className="card-image" style={{ backgroundImage: `url(${product.image})` }}>
+              <span>{product.featured ? 'Featured' : product.category}</span>
+            </Link>
+            <div className="card-content">
+              <h3>{product.name}</h3>
+              <p>{product.description}</p>
+              <div className="card-row">
+                <strong>{formatCurrency(product.price)}</strong>
+                <button type="button" onClick={() => onAddToCart(product)}>
+                  Add
+                </button>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <div className="pagination-row">
+        <button type="button" disabled={page <= 1} onClick={() => setFilters((state) => ({ ...state, page: page - 1 }))}>
+          Previous
+        </button>
+        <span>
+          Page {page} of {totalPages}
+        </span>
+        <button
+          type="button"
+          disabled={page >= totalPages}
+          onClick={() => setFilters((state) => ({ ...state, page: page + 1 }))}
+        >
+          Next
+        </button>
+      </div>
+    </section>
   );
 }
 
-function SparkIcon() {
+function ProductPage({ onAddToCart }) {
+  const { productId } = useParams();
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+
+    const loadProduct = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const response = await productApi.getById(productId);
+        if (active) {
+          setProduct(response.product || null);
+        }
+      } catch (apiError) {
+        if (active) {
+          setError(apiError.message || 'Unable to load product.');
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadProduct();
+
+    return () => {
+      active = false;
+    };
+  }, [productId]);
+
+  if (loading) {
+    return (
+      <section className="page-wrap">
+        <p className="empty-state">Loading product...</p>
+      </section>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <section className="page-wrap">
+        <p className="empty-state">{error || 'Product not found.'}</p>
+      </section>
+    );
+  }
+
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="m12 2 1.89 5.06L19 9l-5.11 1.94L12 16l-1.89-5.06L5 9l5.11-1.94L12 2Zm7 10 1.03 2.75L23 16l-2.97 1.25L19 20l-1.03-2.75L15 16l2.97-1.25L19 12Zm-14 0 1.03 2.75L9 16l-2.97 1.25L5 20l-1.03-2.75L1 16l2.97-1.25L5 12Z" />
-    </svg>
+    <section className="page-wrap product-detail">
+      <div className="detail-image" style={{ backgroundImage: `url(${product.image})` }} />
+      <div className="detail-panel">
+        <p className="eyebrow">{product.category}</p>
+        <h2>{product.name}</h2>
+        <p>{product.description}</p>
+        <div className="detail-stats">
+          <span>Rating {Number(product.rating || 0).toFixed(1)}</span>
+          <span>Stock {product.stock}</span>
+        </div>
+        <strong>{formatCurrency(product.price)}</strong>
+        <button className="pill-button" type="button" onClick={() => onAddToCart(product)}>
+          Add to bag
+        </button>
+      </div>
+    </section>
   );
 }
 
-function StarIcon() {
+function CartPage({ cart, onUpdateItem, onRemoveItem, onClearCart, shippingAddress, setShippingAddress, onCheckout, checkoutLoading }) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="m12 2 3.09 6.26L22 9.27l-5 4.88 1.18 6.89L12 17.97l-6.18 3.07L7 14.15 2 9.27l6.91-1.01L12 2Z" />
-    </svg>
+    <section className="page-wrap cart-layout">
+      <div className="cart-items card-surface">
+        <div className="section-head">
+          <h2>Your bag</h2>
+          <button type="button" onClick={onClearCart} disabled={cart.items.length === 0}>
+            Clear bag
+          </button>
+        </div>
+
+        {cart.items.length === 0 ? <p className="empty-state">Your bag is empty.</p> : null}
+
+        {cart.items.map((item) => (
+          <article className="cart-row" key={`${getItemProductId(item)}-${item.name}`}>
+            <div>
+              <h3>{item.name}</h3>
+              <p>{formatCurrency(item.price)}</p>
+            </div>
+            <label>
+              Qty
+              <input
+                type="number"
+                min="1"
+                value={item.quantity}
+                onChange={(event) => onUpdateItem(getItemProductId(item), Number(event.target.value || 1))}
+              />
+            </label>
+            <button type="button" onClick={() => onRemoveItem(getItemProductId(item))}>
+              Remove
+            </button>
+          </article>
+        ))}
+      </div>
+
+      <form className="checkout-form card-surface" onSubmit={onCheckout}>
+        <div className="section-head">
+          <h2>Checkout</h2>
+          <p>{formatCurrency(cart.subtotal)}</p>
+        </div>
+
+        {Object.entries(shippingAddress).map(([key, value]) => (
+          <label key={key}>
+            {key}
+            <input
+              value={value}
+              onChange={(event) =>
+                setShippingAddress((state) => ({
+                  ...state,
+                  [key]: event.target.value,
+                }))
+              }
+              required
+            />
+          </label>
+        ))}
+
+        <button className="pill-button" type="submit" disabled={checkoutLoading || cart.items.length === 0}>
+          {checkoutLoading ? 'Placing order...' : 'Place order'}
+        </button>
+      </form>
+    </section>
   );
 }
 
-function TruckIcon() {
+function AccountPage({ user, authMode, setAuthMode, authForm, setAuthForm, onSubmitAuth, authLoading, orders, loadingOrders }) {
+  if (!user) {
+    return (
+      <section className="page-wrap account-card card-surface">
+        <div className="section-head">
+          <h2>{authMode === 'login' ? 'Sign in' : 'Create account'}</h2>
+          <button type="button" onClick={() => setAuthMode((state) => (state === 'login' ? 'register' : 'login'))}>
+            {authMode === 'login' ? 'Need an account?' : 'Have an account?'}
+          </button>
+        </div>
+
+        <form className="account-form" onSubmit={onSubmitAuth}>
+          {authMode === 'register' ? (
+            <label>
+              Name
+              <input
+                value={authForm.name}
+                onChange={(event) => setAuthForm((state) => ({ ...state, name: event.target.value }))}
+                required
+              />
+            </label>
+          ) : null}
+
+          <label>
+            Email
+            <input
+              type="email"
+              value={authForm.email}
+              onChange={(event) => setAuthForm((state) => ({ ...state, email: event.target.value }))}
+              required
+            />
+          </label>
+
+          <label>
+            Password
+            <input
+              type="password"
+              minLength={8}
+              value={authForm.password}
+              onChange={(event) => setAuthForm((state) => ({ ...state, password: event.target.value }))}
+              required
+            />
+          </label>
+
+          <button className="pill-button" type="submit" disabled={authLoading}>
+            {authLoading ? 'Please wait...' : authMode === 'login' ? 'Sign in' : 'Create account'}
+          </button>
+        </form>
+      </section>
+    );
+  }
+
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M3 5h11v11H3V5Zm13 3h3.5L22 11v5h-2a3 3 0 0 1-6 0H9a3 3 0 0 1-6 0H1v-2h2.1A3 3 0 0 1 7 11c1.45 0 2.7 1.03 2.96 2.4H14V8Zm0 2v2h2.5L15 10Zm-10 7a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm10 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z" />
-    </svg>
+    <section className="page-wrap account-card card-surface">
+      <div className="section-head">
+        <h2>Hello, {user.name}</h2>
+        <p>{user.email}</p>
+      </div>
+
+      <h3>My orders</h3>
+      {loadingOrders ? <p className="empty-state">Loading orders...</p> : null}
+      {!loadingOrders && orders.length === 0 ? <p className="empty-state">No orders yet.</p> : null}
+
+      <div className="orders-grid">
+        {orders.map((order) => (
+          <article key={order._id} className="order-card">
+            <strong>{order._id.slice(-8).toUpperCase()}</strong>
+            <span>Status: {order.status}</span>
+            <span>Total: {formatCurrency(order.totalAmount)}</span>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 
-function MenuIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M4 6h16v2H4V6Zm0 5h16v2H4v-2Zm0 5h16v2H4v-2Z" />
-    </svg>
-  );
-}
+function AdminPage({ user, token, products, refreshProducts, setStatusMessage }) {
+  const [busy, setBusy] = useState(false);
+  const [editingId, setEditingId] = useState('');
+  const [form, setForm] = useState(adminFormDefaults);
 
-function App() {
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [products, setProducts] = useState([]);
-  const [token, setToken] = useState(localStorage.getItem('ayanfe_token') || '');
-  const [user, setUser] = useState(null);
-  const [cart, setCart] = useState({ items: [], subtotal: 0 });
-  const [authForm, setAuthForm] = useState({ name: '', email: '', password: '' });
-  const [authMode, setAuthMode] = useState('login');
-  const [loadingProducts, setLoadingProducts] = useState(false);
-  const [authLoading, setAuthLoading] = useState(false);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [statusMessage, setStatusMessage] = useState('');
-  const [showAuthPanel, setShowAuthPanel] = useState(false);
-  const [showCheckout, setShowCheckout] = useState(false);
-  const [shippingAddress, setShippingAddress] = useState(initialShipping);
-  const [showAdminPanel, setShowAdminPanel] = useState(false);
-  const [adminBusy, setAdminBusy] = useState(false);
-  const [editingProductId, setEditingProductId] = useState('');
-  const [adminProductForm, setAdminProductForm] = useState(initialAdminProductForm);
-
-  const cartCount = useMemo(
-    () => cart.items.reduce((total, item) => total + item.quantity, 0),
-    [cart.items]
-  );
-
-  const visibleProducts = useMemo(() => {
-    let filtered = products;
-
-    if (activeCategory !== 'All') {
-      filtered = filtered.filter((product) => product.category === activeCategory);
-    }
-
-    if (searchTerm.trim()) {
-      const needle = searchTerm.toLowerCase();
-      filtered = filtered.filter((product) => {
-        const haystack = `${product.name} ${product.description} ${product.category}`.toLowerCase();
-        return haystack.includes(needle);
-      });
-    }
-
-    return filtered;
-  }, [products, activeCategory, searchTerm]);
-
-  const featuredProduct = useMemo(
-    () => products.find((product) => product.featured) || products[0],
-    [products]
-  );
-
-  const catalogCategories = useMemo(() => {
-    const set = new Set();
+  const categories = useMemo(() => {
+    const set = new Set(defaultCategories.filter((category) => category !== 'All'));
     products.forEach((product) => {
       if (product.category) {
         set.add(product.category);
       }
     });
-    return ['All', ...Array.from(set)];
+    return Array.from(set);
   }, [products]);
 
-  const productCounts = useMemo(() => {
-    const counts = products.reduce((acc, product) => {
-      acc[product.category] = (acc[product.category] || 0) + 1;
-      return acc;
-    }, {});
+  if (!user || user.role !== 'admin') {
+    return <Navigate to="/account" replace />;
+  }
 
-    return counts;
-  }, [products]);
+  const resetForm = () => {
+    setEditingId('');
+    setForm(adminFormDefaults);
+  };
 
-  const refreshProducts = async () => {
+  const startEdit = (product) => {
+    setEditingId(product._id);
+    setForm({
+      name: product.name || '',
+      slug: product.slug || '',
+      category: product.category || 'Essentials',
+      price: String(product.price || ''),
+      stock: String(product.stock || ''),
+      image: product.image || '',
+      description: product.description || '',
+      featured: Boolean(product.featured),
+    });
+  };
+
+  const submit = async (event) => {
+    event.preventDefault();
+    setBusy(true);
+    try {
+      const payload = {
+        name: form.name,
+        slug: form.slug,
+        category: form.category,
+        description: form.description,
+        image: form.image,
+        price: Number(form.price),
+        stock: Number(form.stock),
+        featured: Boolean(form.featured),
+      };
+
+      if (editingId) {
+        await productApi.update(token, editingId, payload);
+        setStatusMessage('Product updated.');
+      } else {
+        await productApi.create(token, payload);
+        setStatusMessage('Product created.');
+      }
+
+      resetForm();
+      await refreshProducts();
+    } catch (error) {
+      setStatusMessage(error.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (id) => {
+    setBusy(true);
+    try {
+      await productApi.remove(token, id);
+      setStatusMessage('Product deleted.');
+      await refreshProducts();
+      if (editingId === id) {
+        resetForm();
+      }
+    } catch (error) {
+      setStatusMessage(error.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="page-wrap admin-layout">
+      <form className="admin-form card-surface" onSubmit={submit}>
+        <div className="section-head">
+          <h2>{editingId ? 'Edit product' : 'Create product'}</h2>
+          <button type="button" onClick={resetForm}>
+            Clear
+          </button>
+        </div>
+
+        <label>
+          Name
+          <input value={form.name} onChange={(event) => setForm((state) => ({ ...state, name: event.target.value }))} required />
+        </label>
+        <label>
+          Slug
+          <input value={form.slug} onChange={(event) => setForm((state) => ({ ...state, slug: event.target.value }))} required />
+        </label>
+        <label>
+          Category
+          <select value={form.category} onChange={(event) => setForm((state) => ({ ...state, category: event.target.value }))}>
+            {categories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Price
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={form.price}
+            onChange={(event) => setForm((state) => ({ ...state, price: event.target.value }))}
+            required
+          />
+        </label>
+        <label>
+          Stock
+          <input
+            type="number"
+            min="0"
+            value={form.stock}
+            onChange={(event) => setForm((state) => ({ ...state, stock: event.target.value }))}
+            required
+          />
+        </label>
+        <label>
+          Image URL
+          <input value={form.image} onChange={(event) => setForm((state) => ({ ...state, image: event.target.value }))} required />
+        </label>
+        <label className="full-width">
+          Description
+          <textarea
+            rows={3}
+            value={form.description}
+            onChange={(event) => setForm((state) => ({ ...state, description: event.target.value }))}
+            required
+          />
+        </label>
+        <label className="check-line full-width">
+          <input
+            type="checkbox"
+            checked={form.featured}
+            onChange={(event) => setForm((state) => ({ ...state, featured: event.target.checked }))}
+          />
+          Featured
+        </label>
+        <button className="pill-button full-width" type="submit" disabled={busy}>
+          {busy ? 'Saving...' : editingId ? 'Update product' : 'Create product'}
+        </button>
+      </form>
+
+      <div className="admin-list card-surface">
+        <div className="section-head">
+          <h2>Catalog snapshot</h2>
+          <p>{products.length} loaded items</p>
+        </div>
+
+        {products.map((product) => (
+          <article className="admin-row" key={product._id || product.slug}>
+            <div>
+              <strong>{product.name}</strong>
+              <p>
+                {product.category} / {formatCurrency(product.price)}
+              </p>
+            </div>
+            <div className="row-actions">
+              <button type="button" onClick={() => startEdit(product)}>
+                Edit
+              </button>
+              <button type="button" onClick={() => remove(product._id)}>
+                Delete
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function App() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const [token, setToken] = useState(localStorage.getItem('ayanfe_token') || '');
+  const [user, setUser] = useState(null);
+  const [statusMessage, setStatusMessage] = useState('');
+
+  const [filters, setFilters] = useState({
+    q: '',
+    category: 'All',
+    sort: 'newest',
+    page: 1,
+    limit: 24,
+  });
+
+  const [products, setProducts] = useState([]);
+  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0, limit: 24 });
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [loadingFeatured, setLoadingFeatured] = useState(false);
+
+  const [cart, setCart] = useState({ items: [], subtotal: 0 });
+  const [shippingAddress, setShippingAddress] = useState(initialShipping);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+
+  const [authForm, setAuthForm] = useState(initialAuth);
+  const [authMode, setAuthMode] = useState('login');
+  const [authLoading, setAuthLoading] = useState(false);
+
+  const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+
+  const cartCount = useMemo(() => cart.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0), [cart.items]);
+
+  const categoryOptions = useMemo(() => {
+    const set = new Set(defaultCategories);
+    products.forEach((product) => {
+      if (product.category) {
+        set.add(product.category);
+      }
+    });
+    featuredProducts.forEach((product) => {
+      if (product.category) {
+        set.add(product.category);
+      }
+    });
+    return Array.from(set);
+  }, [products, featuredProducts]);
+
+  const refreshProducts = async (nextFilters = filters) => {
     setLoadingProducts(true);
     try {
-      const response = await productApi.list({ limit: 120 });
+      const params = {
+        q: nextFilters.q,
+        sort: nextFilters.sort,
+        page: nextFilters.page,
+        limit: nextFilters.limit,
+      };
+      if (nextFilters.category !== 'All') {
+        params.category = nextFilters.category;
+      }
+
+      const response = await productApi.list(params);
       setProducts(response.products || []);
+      setPagination(response.pagination || { page: 1, pages: 1, total: 0, limit: nextFilters.limit });
     } catch (error) {
-      setProducts(fallbackProducts);
-      setStatusMessage('Using local catalog preview while backend is unavailable.');
+      setStatusMessage(error.message);
+      setProducts([]);
     } finally {
       setLoadingProducts(false);
     }
   };
 
   useEffect(() => {
-    refreshProducts();
+    refreshProducts(filters);
+  }, [filters]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadFeatured = async () => {
+      setLoadingFeatured(true);
+      try {
+        const response = await productApi.list({ featured: true, limit: 8, sort: 'rating' });
+        if (active) {
+          setFeaturedProducts(response.products || []);
+        }
+      } catch {
+        if (active) {
+          setFeaturedProducts([]);
+        }
+      } finally {
+        if (active) {
+          setLoadingFeatured(false);
+        }
+      }
+    };
+
+    loadFeatured();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
+    let active = true;
+
     const hydrateUser = async () => {
       if (!token) {
-        setUser(null);
-        setCart({ items: [], subtotal: 0 });
+        if (active) {
+          setUser(null);
+          setCart({ items: [], subtotal: 0 });
+          setOrders([]);
+        }
         return;
       }
 
       try {
-        const [meRes, cartRes] = await Promise.all([authApi.me(token), cartApi.get(token)]);
-        setUser(meRes.user || null);
-        setCart(cartRes.cart || { items: [], subtotal: 0 });
-      } catch (error) {
+        const [meResponse, cartResponse] = await Promise.all([authApi.me(token), cartApi.get(token)]);
+        if (!active) return;
+        setUser(meResponse.user || null);
+        setCart(cartResponse.cart || { items: [], subtotal: 0 });
+      } catch {
+        if (!active) return;
         localStorage.removeItem('ayanfe_token');
         setToken('');
         setUser(null);
@@ -220,28 +779,131 @@ function App() {
     };
 
     hydrateUser();
+
+    return () => {
+      active = false;
+    };
   }, [token]);
 
+  useEffect(() => {
+    let active = true;
+
+    const loadOrders = async () => {
+      if (!token || !user) {
+        setOrders([]);
+        return;
+      }
+
+      setLoadingOrders(true);
+      try {
+        const response = await orderApi.mine(token);
+        if (active) {
+          setOrders(response.orders || []);
+        }
+      } catch {
+        if (active) {
+          setOrders([]);
+        }
+      } finally {
+        if (active) {
+          setLoadingOrders(false);
+        }
+      }
+    };
+
+    loadOrders();
+
+    return () => {
+      active = false;
+    };
+  }, [token, user]);
+
+  const handleSearchChange = (value) => {
+    setFilters((state) => ({ ...state, q: value, page: 1 }));
+    if (!location.pathname.startsWith('/shop')) {
+      navigate('/shop');
+    }
+  };
+
+  const requireAuth = () => {
+    setStatusMessage('Sign in to continue.');
+    navigate('/account');
+  };
+
   const addToCart = async (product) => {
-    if (!user || !token) {
-      setShowAuthPanel(true);
-      setStatusMessage('Sign in to add items to cart.');
+    if (!token || !user) {
+      requireAuth();
       return;
     }
 
     try {
       const response = await cartApi.add(token, { productId: product._id, quantity: 1 });
-      setCart(response.cart);
-      setStatusMessage(`${product.name} added to your bag.`);
+      setCart(response.cart || { items: [], subtotal: 0 });
+      setStatusMessage(`${product.name} added to bag.`);
     } catch (error) {
       setStatusMessage(error.message);
+    }
+  };
+
+  const updateCartItem = async (productId, quantity) => {
+    if (!token) return;
+    try {
+      const response = await cartApi.update(token, productId, { quantity });
+      setCart(response.cart || { items: [], subtotal: 0 });
+    } catch (error) {
+      setStatusMessage(error.message);
+    }
+  };
+
+  const removeCartItem = async (productId) => {
+    if (!token) return;
+    try {
+      const response = await cartApi.remove(token, productId);
+      setCart(response.cart || { items: [], subtotal: 0 });
+    } catch (error) {
+      setStatusMessage(error.message);
+    }
+  };
+
+  const clearCart = async () => {
+    if (!token) return;
+    try {
+      const response = await cartApi.clear(token);
+      setCart(response.cart || { items: [], subtotal: 0 });
+    } catch (error) {
+      setStatusMessage(error.message);
+    }
+  };
+
+  const handleCheckout = async (event) => {
+    event.preventDefault();
+    if (!token || !user) {
+      requireAuth();
+      return;
+    }
+
+    if (cart.items.length === 0) {
+      setStatusMessage('Your bag is empty.');
+      return;
+    }
+
+    setCheckoutLoading(true);
+    try {
+      const response = await orderApi.create(token, { shippingAddress, paymentMethod: 'card' });
+      setCart({ items: [], subtotal: 0 });
+      setShippingAddress(initialShipping);
+      setStatusMessage(`Order placed: ${response.order?._id || 'created'}`);
+      navigate('/account');
+    } catch (error) {
+      setStatusMessage(error.message);
+    } finally {
+      setCheckoutLoading(false);
     }
   };
 
   const submitAuth = async (event) => {
     event.preventDefault();
     setAuthLoading(true);
-    setStatusMessage('');
 
     try {
       const response =
@@ -251,45 +913,13 @@ function App() {
 
       localStorage.setItem('ayanfe_token', response.token);
       setToken(response.token);
-      setAuthForm({ name: '', email: '', password: '' });
-      setShowAuthPanel(false);
+      setAuthForm(initialAuth);
       setStatusMessage(response.message || 'Authentication successful.');
+      navigate('/account');
     } catch (error) {
       setStatusMessage(error.message);
     } finally {
       setAuthLoading(false);
-    }
-  };
-
-  const handleCheckout = async (event) => {
-    event.preventDefault();
-    if (!token || !user) {
-      setShowAuthPanel(true);
-      setStatusMessage('Sign in to place your order.');
-      return;
-    }
-
-    if (cart.items.length === 0) {
-      setStatusMessage('Your cart is empty. Add items before checkout.');
-      return;
-    }
-
-    setCheckoutLoading(true);
-
-    try {
-      const response = await orderApi.create(token, {
-        shippingAddress,
-        paymentMethod: 'card',
-      });
-
-      setCart({ items: [], subtotal: 0 });
-      setShowCheckout(false);
-      setShippingAddress(initialShipping);
-      setStatusMessage(`Order placed successfully. Order id: ${response.order?._id || 'created'}.`);
-    } catch (error) {
-      setStatusMessage(error.message);
-    } finally {
-      setCheckoutLoading(false);
     }
   };
 
@@ -298,571 +928,87 @@ function App() {
     setToken('');
     setUser(null);
     setCart({ items: [], subtotal: 0 });
-    setStatusMessage('Signed out successfully.');
-    setShowAdminPanel(false);
-    setEditingProductId('');
-    setAdminProductForm(initialAdminProductForm);
-  };
-
-  const upsertProduct = async (event) => {
-    event.preventDefault();
-    if (!token || user?.role !== 'admin') {
-      setStatusMessage('Admin access required.');
-      return;
-    }
-
-    setAdminBusy(true);
-    try {
-      const payload = {
-        name: adminProductForm.name,
-        slug: adminProductForm.slug,
-        category: adminProductForm.category,
-        description: adminProductForm.description,
-        image: adminProductForm.image,
-        price: Number(adminProductForm.price),
-        stock: Number(adminProductForm.stock),
-        featured: Boolean(adminProductForm.featured),
-      };
-
-      if (editingProductId) {
-        await productApi.update(token, editingProductId, payload);
-        setStatusMessage('Product updated successfully.');
-      } else {
-        await productApi.create(token, payload);
-        setStatusMessage('Product created successfully.');
-      }
-
-      setEditingProductId('');
-      setAdminProductForm(initialAdminProductForm);
-      await refreshProducts();
-    } catch (error) {
-      setStatusMessage(error.message);
-    } finally {
-      setAdminBusy(false);
-    }
-  };
-
-  const startEditProduct = (product) => {
-    setEditingProductId(product._id);
-    setShowAdminPanel(true);
-    setAdminProductForm({
-      name: product.name || '',
-      slug: product.slug || '',
-      category: product.category || 'Essentials',
-      price: String(product.price ?? ''),
-      stock: String(product.stock ?? ''),
-      image: product.image || '',
-      description: product.description || '',
-      featured: Boolean(product.featured),
-    });
-  };
-
-  const removeProduct = async (productId) => {
-    if (!token || user?.role !== 'admin') {
-      setStatusMessage('Admin access required.');
-      return;
-    }
-
-    setAdminBusy(true);
-    try {
-      await productApi.remove(token, productId);
-      setStatusMessage('Product deleted successfully.');
-      await refreshProducts();
-
-      if (editingProductId === productId) {
-        setEditingProductId('');
-        setAdminProductForm(initialAdminProductForm);
-      }
-    } catch (error) {
-      setStatusMessage(error.message);
-    } finally {
-      setAdminBusy(false);
-    }
+    setOrders([]);
+    setStatusMessage('Signed out.');
+    navigate('/');
   };
 
   return (
-    <main className="site-shell">
-      <header className="topbar">
-        <div className="brand-lockup">
-          <div className="brand-mark">
-            <SparkIcon />
-          </div>
-          <div>
-            <span className="brand-kicker">Ayanfe Clothings</span>
-            <strong>Luxury wear, made to move.</strong>
-          </div>
-        </div>
-
-        <label className="search-bar" aria-label="Search products">
-          <SearchIcon />
-          <input
-            type="search"
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Search dresses, sets, totes, and more"
-          />
-        </label>
-
-        <div className="topbar-actions">
-          {!user ? (
-            <button className="secondary-button auth-button" type="button" onClick={() => setShowAuthPanel((state) => !state)}>
-              {showAuthPanel ? 'Close' : 'Sign in'}
-            </button>
-          ) : (
-            <button className="secondary-button auth-button" type="button" onClick={logout}>
-              Logout
-            </button>
-          )}
-          {user?.role === 'admin' ? (
-            <button className="secondary-button auth-button" type="button" onClick={() => setShowAdminPanel((state) => !state)}>
-              {showAdminPanel ? 'Hide admin' : 'Admin'}
-            </button>
-          ) : null}
-          <button className="icon-button mobile-only" type="button" aria-label="Open menu">
-            <MenuIcon />
-          </button>
-          <button className="icon-button" type="button" aria-label="View cart" onClick={() => setShowCheckout((state) => !state)}>
-            <CartIcon />
-            <span className="badge">{cartCount}</span>
-          </button>
-        </div>
-      </header>
-
-      {statusMessage ? <p className="status-banner">{statusMessage}</p> : null}
-
-      {showAuthPanel ? (
-        <section className="auth-panel reveal" aria-live="polite">
-          <div className="section-heading split">
-            <div>
-              <p className="eyebrow">{authMode === 'login' ? 'Welcome back' : 'Create account'}</p>
-              <h2>{authMode === 'login' ? 'Sign in to manage your cart.' : 'Join Ayanfe Clothings today.'}</h2>
-            </div>
-            <p className="section-copy">Your account lets you save your cart, track orders, and checkout securely.</p>
-          </div>
-
-          <form className="auth-form" onSubmit={submitAuth}>
-            {authMode === 'register' ? (
-              <label>
-                Name
-                <input
-                  value={authForm.name}
-                  onChange={(event) => setAuthForm((state) => ({ ...state, name: event.target.value }))}
-                  placeholder="Ayanfe customer"
-                  required
-                />
-              </label>
-            ) : null}
-
-            <label>
-              Email
-              <input
-                type="email"
-                value={authForm.email}
-                onChange={(event) => setAuthForm((state) => ({ ...state, email: event.target.value }))}
-                placeholder="you@example.com"
-                required
-              />
-            </label>
-
-            <label>
-              Password
-              <input
-                type="password"
-                value={authForm.password}
-                onChange={(event) => setAuthForm((state) => ({ ...state, password: event.target.value }))}
-                placeholder="At least 8 characters"
-                minLength={8}
-                required
-              />
-            </label>
-
-            <div className="auth-actions">
-              <button className="primary-button" type="submit" disabled={authLoading}>
-                {authLoading ? 'Please wait...' : authMode === 'login' ? 'Sign in' : 'Create account'}
-              </button>
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => setAuthMode((state) => (state === 'login' ? 'register' : 'login'))}
-              >
-                {authMode === 'login' ? 'Need an account?' : 'Already have an account?'}
-              </button>
-            </div>
-          </form>
-        </section>
-      ) : null}
-
-      <section className="hero-grid">
-        <div className="hero-copy reveal">
-          <p className="eyebrow">Spring 2026 drop</p>
-          <h1>Sharp silhouettes for the modern Ayanfe woman.</h1>
-          <p className="hero-text">
-            Ayanfe Clothings blends elegant tailoring, calm luxury, and fast, secure shopping into one premium storefront experience.
-          </p>
-
-          <div className="hero-actions">
-            <button className="primary-button" type="button" onClick={() => document.getElementById('product-grid')?.scrollIntoView({ behavior: 'smooth' })}>
-              Shop the drop
-            </button>
-            <button className="secondary-button" type="button" onClick={() => setShowCheckout(true)}>
-              Checkout now
-            </button>
-          </div>
-
-          <div className="hero-metrics">
-            <div>
-              <strong>48h</strong>
-              <span>fast dispatch</span>
-            </div>
-            <div>
-              <strong>4.9/5</strong>
-              <span>customer rating</span>
-            </div>
-            <div>
-              <strong>100%</strong>
-              <span>secure checkout</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="hero-visual reveal delay-1">
-          <div className="floating-card card-a">
-            <span>Featured style</span>
-            <strong>{featuredProduct?.name || 'Signature Draped Set'}</strong>
-            <p>{featuredProduct?.description || 'Clean lines, premium finish, instant confidence.'}</p>
-          </div>
-
-          <div className="showcase-panel">
-            <div className="showcase-orb orb-one" />
-            <div className="showcase-orb orb-two" />
-            <div className="showcase-product">
-              <div className="product-glow" />
-              <span className="product-tag">New arrival</span>
-              <h2>Elevated essentials with a luxury edge.</h2>
-              <p>Built for the woman who wants a polished brand experience that feels premium from landing page to checkout.</p>
-              <div className="product-stats">
-                <div>
-                  <ShieldIcon />
-                  <span>Secure by default</span>
-                </div>
-                <div>
-                  <TruckIcon />
-                  <span>Tracked delivery</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="floating-card card-b">
-            <span>This week</span>
-            <strong>{cartCount > 0 ? `${cartCount} items in bag` : 'Your bag is waiting'}</strong>
-            <p>Modern workflow, clean fulfillment, premium packaging.</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="assurance-strip reveal delay-2">
-        {assurances.map((item) => (
-          <div key={item} className="assurance-chip">
-            <ShieldIcon />
-            <span>{item}</span>
-          </div>
-        ))}
-      </section>
-
-      <section className="section-block reveal delay-2">
-        <div className="section-heading">
-          <p className="eyebrow">Shop by mood</p>
-          <h2>From everyday essentials to elevated occasion pieces.</h2>
-        </div>
-        <div className="category-row">
-          {catalogCategories.map((category) => (
-            <button
-              key={category}
-              className={category === activeCategory ? 'category-pill active' : 'category-pill'}
-              type="button"
-              onClick={() => setActiveCategory(category)}
-            >
-              <span>{category}</span>
-              {category !== 'All' ? <strong>{productCounts[category] || 0}</strong> : <strong>{products.length}</strong>}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {user?.role === 'admin' && showAdminPanel ? (
-        <section className="admin-panel reveal delay-2">
-          <div className="section-heading split">
-            <div>
-              <p className="eyebrow">Admin dashboard</p>
-              <h2>Manage products, stock, and featured visibility.</h2>
-            </div>
-            <p className="section-copy">{products.length} products currently in catalog.</p>
-          </div>
-
-          <form className="admin-form" onSubmit={upsertProduct}>
-            <label>
-              Product name
-              <input
-                value={adminProductForm.name}
-                onChange={(event) => setAdminProductForm((state) => ({ ...state, name: event.target.value }))}
-                required
-              />
-            </label>
-            <label>
-              Slug
-              <input
-                value={adminProductForm.slug}
-                onChange={(event) => setAdminProductForm((state) => ({ ...state, slug: event.target.value }))}
-                required
-              />
-            </label>
-            <label>
-              Category
-              <select
-                value={adminProductForm.category}
-                onChange={(event) => setAdminProductForm((state) => ({ ...state, category: event.target.value }))}
-              >
-                {['Essentials', 'Luxury Sets', 'Occasion Wear', 'Accessories'].map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Price
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={adminProductForm.price}
-                onChange={(event) => setAdminProductForm((state) => ({ ...state, price: event.target.value }))}
-                required
-              />
-            </label>
-            <label>
-              Stock
-              <input
-                type="number"
-                min="0"
-                value={adminProductForm.stock}
-                onChange={(event) => setAdminProductForm((state) => ({ ...state, stock: event.target.value }))}
-                required
-              />
-            </label>
-            <label>
-              Image URL
-              <input
-                value={adminProductForm.image}
-                onChange={(event) => setAdminProductForm((state) => ({ ...state, image: event.target.value }))}
-                required
-              />
-            </label>
-            <label className="span-all">
-              Description
-              <textarea
-                value={adminProductForm.description}
-                onChange={(event) => setAdminProductForm((state) => ({ ...state, description: event.target.value }))}
-                rows={3}
-                required
-              />
-            </label>
-            <label className="feature-toggle span-all">
-              <input
-                type="checkbox"
-                checked={adminProductForm.featured}
-                onChange={(event) => setAdminProductForm((state) => ({ ...state, featured: event.target.checked }))}
-              />
-              Mark as featured
-            </label>
-
-            <div className="auth-actions span-all">
-              <button className="primary-button" type="submit" disabled={adminBusy}>
-                {adminBusy ? 'Saving...' : editingProductId ? 'Update product' : 'Create product'}
-              </button>
-              <button
-                className="secondary-button"
-                type="button"
-                onClick={() => {
-                  setEditingProductId('');
-                  setAdminProductForm(initialAdminProductForm);
-                }}
-              >
-                Clear form
-              </button>
-            </div>
-          </form>
-
-          <div className="admin-product-list">
-            {products.slice(0, 20).map((product) => (
-              <article key={product._id || product.slug} className="admin-product-row">
-                <div>
-                  <strong>{product.name}</strong>
-                  <p>{product.category}</p>
-                </div>
-                <div>
-                  <span>${Number(product.price || 0).toFixed(2)}</span>
-                  <small>Stock {product.stock}</small>
-                </div>
-                <div className="admin-row-actions">
-                  <button type="button" className="secondary-button mini-button" onClick={() => startEditProduct(product)}>
-                    Edit
-                  </button>
-                  <button type="button" className="secondary-button mini-button" onClick={() => removeProduct(product._id)}>
-                    Delete
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      <section className="section-block reveal delay-3" id="product-grid">
-        <div className="section-heading split">
-          <div>
-            <p className="eyebrow">Curated collection</p>
-            <h2>Products designed to feel editorial and convert like a flagship store.</h2>
-          </div>
-          <div className="catalog-summary">
-            <p className="section-copy">
-              {loadingProducts ? 'Loading products...' : `${visibleProducts.length} of ${products.length} products ready to shop.`}
-            </p>
-            <button
-              type="button"
-              className="secondary-button mini-button"
-              onClick={() => {
-                setActiveCategory('All');
-                setSearchTerm('');
-              }}
-            >
-              Reset filters
-            </button>
-          </div>
-        </div>
-
-        <div className="product-grid">
-          {visibleProducts.map((product, index) => (
-            <article
-              key={product._id || product.slug || product.name}
-              className={`product-card ${getCardAccent(product.category)}`}
-              style={{ '--delay': `${index * 80}ms` }}
-            >
-              <div
-                className="card-visual"
-                style={{
-                  backgroundImage: `linear-gradient(160deg, rgba(31,26,23,0.72), rgba(102,74,46,0.58)), url(${product.image})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                }}
-              >
-                <span>{product.featured ? 'Featured' : 'In stock'}</span>
-                <div className="card-shape" />
-              </div>
-              <div className="product-meta">
-                <div>
-                  <p>{product.category}</p>
-                  <h3>{product.name}</h3>
-                </div>
-                <div className="rating-line">
-                  <StarIcon />
-                  <span>{Number(product.rating || 0).toFixed(1)}</span>
-                </div>
-              </div>
-              <div className="product-footer">
-                <strong>${Number(product.price || 0).toFixed(2)}</strong>
-                <button type="button" onClick={() => addToCart(product)}>
-                  Add to bag
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {showCheckout ? (
-        <section className="checkout-panel reveal delay-2">
-          <div className="section-heading split">
-            <div>
-              <p className="eyebrow">Checkout</p>
-              <h2>Secure payment and delivery details.</h2>
-            </div>
-            <p className="section-copy">Subtotal: ${Number(cart.subtotal || 0).toFixed(2)}.</p>
-          </div>
-
-          <form className="checkout-form" onSubmit={handleCheckout}>
-            {Object.entries(shippingAddress).map(([key, value]) => (
-              <label key={key}>
-                {key}
-                <input
-                  value={value}
-                  onChange={(event) =>
-                    setShippingAddress((state) => ({
-                      ...state,
-                      [key]: event.target.value,
-                    }))
-                  }
-                  required
-                />
-              </label>
-            ))}
-
-            <div className="auth-actions">
-              <button type="submit" className="primary-button" disabled={checkoutLoading}>
-                {checkoutLoading ? 'Placing order...' : 'Place order'}
-              </button>
-              <button type="button" className="secondary-button" onClick={() => setShowCheckout(false)}>
-                Close
-              </button>
-            </div>
-          </form>
-        </section>
-      ) : null}
-
-      <section className="story-grid reveal delay-3">
-        <div className="story-card story-panel">
-          <p className="eyebrow">Operations-first</p>
-          <h2>Security, trust, and fulfillment should feel built in.</h2>
-          <ul>
-            {servicePoints.map((point) => (
-              <li key={point}>{point}</li>
-            ))}
-          </ul>
-        </div>
-        <div className="story-card testimonials">
-          {testimonials.map((item) => (
-            <blockquote key={item.author}>
-              <p>“{item.quote}”</p>
-              <footer>{item.author}</footer>
-            </blockquote>
-          ))}
-        </div>
-      </section>
-
-      <section className="newsletter reveal delay-3">
-        <div>
-          <p className="eyebrow">Stay updated</p>
-          <h2>Get new drops, restocks, and private offers first.</h2>
-        </div>
-        <form className="newsletter-form" onSubmit={(event) => event.preventDefault()}>
-          <input type="email" placeholder="Enter your email address" aria-label="Email address" />
-          <button type="submit">Join the list</button>
-        </form>
-      </section>
-
-      <footer className="site-footer">
-        <div>
-          <strong>Ayanfe Clothings</strong>
-          <p>Elegant fashion storefront with a secure, conversion-focused shopping experience.</p>
-        </div>
-        <div>
-          <span>Secure checkout</span>
-          <span>Responsive by design</span>
-          <span>Built for scale</span>
-        </div>
-      </footer>
-    </main>
+    <SiteLayout
+      user={user}
+      onLogout={logout}
+      cartCount={cartCount}
+      statusMessage={statusMessage}
+      clearStatus={() => setStatusMessage('')}
+      searchValue={filters.q}
+      onSearchChange={handleSearchChange}
+    >
+      <Routes>
+        <Route
+          path="/"
+          element={<HomePage featuredProducts={featuredProducts} loading={loadingFeatured} onAddToCart={addToCart} onRequireAuth={requireAuth} />}
+        />
+        <Route
+          path="/shop"
+          element={
+            <ShopPage
+              filters={filters}
+              setFilters={setFilters}
+              products={products}
+              pagination={pagination}
+              loading={loadingProducts}
+              categories={categoryOptions}
+              onAddToCart={addToCart}
+            />
+          }
+        />
+        <Route path="/shop/:productId" element={<ProductPage onAddToCart={addToCart} />} />
+        <Route
+          path="/cart"
+          element={
+            <CartPage
+              cart={cart}
+              onUpdateItem={updateCartItem}
+              onRemoveItem={removeCartItem}
+              onClearCart={clearCart}
+              shippingAddress={shippingAddress}
+              setShippingAddress={setShippingAddress}
+              onCheckout={handleCheckout}
+              checkoutLoading={checkoutLoading}
+            />
+          }
+        />
+        <Route
+          path="/account"
+          element={
+            <AccountPage
+              user={user}
+              authMode={authMode}
+              setAuthMode={setAuthMode}
+              authForm={authForm}
+              setAuthForm={setAuthForm}
+              onSubmitAuth={submitAuth}
+              authLoading={authLoading}
+              orders={orders}
+              loadingOrders={loadingOrders}
+            />
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <AdminPage
+              user={user}
+              token={token}
+              products={products}
+              refreshProducts={() => refreshProducts(filters)}
+              setStatusMessage={setStatusMessage}
+            />
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </SiteLayout>
   );
 }
 
